@@ -13,12 +13,10 @@ struct NetworkIfaceWrapper(NetworkInterface);
 
 impl PartialEq for NetworkIfaceWrapper {
     fn eq(&self, other: &Self) -> bool {
-        let addr_equal = match (&self.0.addr, &other.0.addr) {
-            (Some(network_interface::Addr::V4(a)), Some(network_interface::Addr::V4(b))) => {
-                a.ip == b.ip
-            }
-            _ => false,
-        };
+        let addr_equal = matches!(
+            (&self.0.addr, &other.0.addr),
+            (Some(network_interface::Addr::V4(a)), Some(network_interface::Addr::V4(b))) if a.ip == b.ip
+        );
 
         self.0.name == other.0.name && addr_equal && self.0.index == other.0.index
     }
