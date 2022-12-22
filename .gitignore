@@ -1,0 +1,6 @@
+# IDEA
+/.idea/
+# VS Code
+/.vscode/
+# Rust
+/target
