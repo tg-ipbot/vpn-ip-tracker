@@ -1,6 +1,6 @@
 [package]
 name = "vpn-ip-tracker"
-authors = ["Vladimir Petrigo <vladimir.petrigo@gmail.com"]
+authors = ["Vladimir Petrigo <vladimir.petrigo@gmail.com>"]
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -8,9 +8,11 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = { version = "~4.0", features = ["derive"] }
+confy = "~0.5"
+directories = "~4.0"
 env_logger = "~0.10"
 log = "~0.4"
 network-interface = "~0.1"
 reqwest = { version = "~0.11", default-features = false, features = ["native-tls", "blocking"] }
 serde = { version = "~1.0", features = ["serde_derive"] }
-serde_json = "~1.0"
