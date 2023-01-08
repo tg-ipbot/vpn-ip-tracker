@@ -1,47 +1,39 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0 */
+use clap::Parser;
 use log::{debug, warn};
 use network_interface::{self, NetworkInterface, NetworkInterfaceConfig};
-use serde::Deserialize;
 
 use utils::IfaceInfo;
+use vpn_ip_tracker::TrackerConfig;
 
 mod utils;
 
-const REPORT_URL_VAR: &str = "IPREPORT_ADDR";
-const TOKEN_ENV_VAR: &str = "IPREPORT_APP_TOKEN";
-const CONFIG_JSON_FILE: &str = "config.json";
 const REPORT_CERT_FILE: &str = "cert.pem";
 
-#[derive(Debug, PartialEq, Deserialize)]
-struct TrackerConfig {
-    token: String,
-    #[serde(rename(deserialize = "reportUrl"))]
-    report_url: String,
+#[derive(Parser)]
+#[command(author, version)]
+struct Cli {
+    #[arg(short, long, default_value_t = false)]
+    verbose: bool,
 }
 
-impl TrackerConfig {
-    fn from_env() -> Option<Self> {
-        let report_url = std::env::var(REPORT_URL_VAR);
-        let token = std::env::var(TOKEN_ENV_VAR);
+#[derive(Debug)]
+enum AppError {
+    ConfigInvalid,
+}
 
-        if report_url.is_err() || token.is_err() {
-            return None;
-        }
+fn main() -> Result<(), AppError> {
+    let args = Cli::parse();
 
-        let report_url = report_url.unwrap();
-        let token = token.unwrap();
-
-        Some(Self { token, report_url })
+    if args.verbose {
+        env_logger::init();
     }
-}
 
-fn main() -> Result<(), std::io::Error> {
-    env_logger::init();
     let mut stored_iface: Option<IfaceInfo> = None;
-    let config = load_config();
+    let config = TrackerConfig::load();
 
     if config.is_none() {
-        return Err(std::io::Error::from(std::io::ErrorKind::InvalidInput));
+        return Err(AppError::ConfigInvalid);
     }
 
     let config = config.unwrap();
@@ -71,18 +63,6 @@ fn main() -> Result<(), std::io::Error> {
 
         std::thread::sleep(std::time::Duration::from_secs(30));
     }
-}
-
-fn load_config() -> Option<TrackerConfig> {
-    let config = std::fs::File::open(CONFIG_JSON_FILE);
-
-    if let Ok(config) = config {
-        if let Ok(config) = serde_json::from_reader(&config) {
-            return Some(config);
-        }
-    }
-
-    TrackerConfig::from_env()
 }
 
 fn send_report(iface: &IfaceInfo, config: &TrackerConfig) -> reqwest::Result<()> {
@@ -125,64 +105,5 @@ fn vpn_iface_check(iface: &NetworkInterface) -> bool {
 
 #[cfg(windows)]
 fn vpn_iface_check(iface: &NetworkInterface) -> bool {
-    false
-}
-
-#[cfg(test)]
-mod config_tests {
-    use crate::{load_config, CONFIG_JSON_FILE, REPORT_URL_VAR, TOKEN_ENV_VAR};
-
-    use std::env;
-
-    const TEST_TOKEN: &str = "some_env_token";
-    const TEST_URL: &str = "https://some_url/";
-
-    #[test]
-    fn test_load_config_no_available() {
-        let config = load_config();
-        assert_eq!(config, None);
-    }
-
-    #[test]
-    fn test_load_config_env() {
-        fn setup(exp_token: &str, exp_url: &str) {
-            env::set_var(TOKEN_ENV_VAR, exp_token);
-            env::set_var(REPORT_URL_VAR, exp_url);
-        }
-
-        fn teardown() {
-            env::remove_var(TOKEN_ENV_VAR);
-            env::remove_var(REPORT_URL_VAR);
-        }
-
-        setup(TEST_TOKEN, TEST_URL);
-        let config = load_config().unwrap();
-
-        assert_eq!(config.token, TEST_TOKEN);
-        assert_eq!(config.report_url, TEST_URL);
-        teardown();
-    }
-
-    #[test]
-    fn test_load_token_file() {
-        fn setup(exp_token: &str, exp_url: &str) {
-            let data = serde_json::json![{
-                "token": exp_token,
-                "reportUrl": exp_url,
-            }];
-            let f = std::fs::File::create(CONFIG_JSON_FILE).unwrap();
-            serde_json::ser::to_writer_pretty(f, &data).unwrap();
-        }
-
-        fn teardown() {
-            std::fs::remove_file(CONFIG_JSON_FILE).expect("Failed to remove test config.json");
-        }
-
-        setup(TEST_TOKEN, TEST_URL);
-        let config = load_config().unwrap();
-
-        assert_eq!(config.token, TEST_TOKEN);
-        assert_eq!(config.report_url, TEST_URL);
-        teardown();
-    }
+    iface.name.contains("OpenVPN TAP")
 }
