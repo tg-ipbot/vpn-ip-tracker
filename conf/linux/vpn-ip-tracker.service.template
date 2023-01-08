@@ -1,0 +1,13 @@
+[Unit]
+Description=VPN IP Tracker
+After=network-online.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=@dir@/vpn-ip-tracker
+WorkingDirectory=@dir@
+Restart=always
+RestartSec=5
