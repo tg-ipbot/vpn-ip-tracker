@@ -10,6 +10,8 @@ use config_linux::install_service;
 
 #[cfg(target_os = "windows")]
 mod config_win;
+#[cfg(target_os = "windows")]
+use config_win::install_service;
 
 #[derive(Debug, Parser)]
 #[command(author, about = "VPN IP Tracker configuration", version)]
