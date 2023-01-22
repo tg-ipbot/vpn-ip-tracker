@@ -1,37 +1,71 @@
-use clap::Parser;
+use std::io;
+
+use clap::{Parser, Subcommand};
 use confy::ConfyError;
+use thiserror::Error;
 
-use vpn_ip_tracker::{TrackerConfig, APP_NAME, DEFAULT_REPORT_URL};
-
-#[cfg(target_os = "linux")]
-mod config_linux;
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 use config_linux::install_service;
+#[cfg(windows)]
+use config_win::{config_setup, install_service};
+use vpn_ip_tracker::{APP_NAME, DEFAULT_REPORT_URL, TrackerConfig};
 
-#[cfg(target_os = "windows")]
+use crate::config_win::uninstall_service;
+
+#[cfg(unix)]
+mod config_linux;
+
+#[cfg(windows)]
 mod config_win;
-#[cfg(target_os = "windows")]
-use config_win::install_service;
 
 #[derive(Debug, Parser)]
 #[command(author, about = "VPN IP Tracker configuration", version)]
 struct Cli {
-    #[arg(short, long, help = "Application token")]
-    token: String,
-    #[arg(short, long, help = "URL to send reports with IP address info")]
-    report_url: Option<String>,
+    #[command(subcommand)]
+    command: Commands,
 }
 
-fn main() -> Result<(), ConfyError> {
+#[derive(Debug, Subcommand)]
+enum Commands {
+    #[command(about = "Install VPN IP Tracker service")]
+    Install {
+        #[arg(short, long, help = "Application token")]
+        token: String,
+        #[arg(short, long, help = "URL to send reports with IP address info")]
+        report_url: Option<String>,
+    },
+    #[command(about = "Uninstall VPN IP Tracker service")]
+    Uninstall,
+}
+
+#[derive(Debug, Error)]
+enum ConfigError {
+    #[error("path error")]
+    Path(#[from] io::Error),
+    #[error("configuration file error")]
+    ConfigFile(#[from] ConfyError),
+    #[cfg(target_os = "windows")]
+    #[error("windows service error")]
+    Service(#[from] windows_service::Error),
+}
+
+fn main() -> Result<(), ConfigError> {
     let args = Cli::parse();
 
-    confy::store(
-        APP_NAME,
-        None,
-        TrackerConfig::new(
-            args.token,
-            args.report_url.unwrap_or_else(|| DEFAULT_REPORT_URL.into()),
-        ),
-    )?;
-    install_service().map_err(ConfyError::GeneralLoadError)
+    match args.command {
+        Commands::Install {
+            token, report_url
+        } => {
+            config_setup(TrackerConfig::new(
+                token,
+                report_url.unwrap_or_else(|| DEFAULT_REPORT_URL.into()))
+            )?;
+            install_service()?;
+        }
+        Commands::Uninstall => {
+            uninstall_service()?;
+        }
+    }
+
+    Ok(())
 }

@@ -4,6 +4,16 @@ use directories::BaseDirs;
 
 type Result<T> = core::result::Result<T, Error>;
 
+pub(super) fn config_setup(config: TrackerConfig) -> Result<()> {
+    confy::store(
+        APP_NAME,
+        None,
+        config,
+    )?;
+
+    Ok(())
+}
+
 pub(super) fn install_service() -> Result<()> {
     const TEMPLATE_SERVICE_FILENAME: &str = "vpn-ip-tracker.service.template";
     let executable_path = std::env::current_exe()?;
@@ -36,4 +46,8 @@ pub(super) fn install_service() -> Result<()> {
     }
 
     Ok(())
+}
+
+pub(super) fn uninstall_service() -> Result<()> {
+    todo!()
 }
