@@ -1,8 +1,11 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0 */
+use confy::ConfyError;
 use serde::{Deserialize, Serialize};
 
 /// Application name that is used for configuration stuff
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
+#[cfg(windows)]
+pub const APP_SERVICE_NAME: &str = "vpn-ip-tracker-svc";
 /// Default report service URL
 pub const DEFAULT_REPORT_URL: &str = env!("VPN_IP_TRACKER_REPORT_URL");
 /// Environment variable name that provides report URL to send VPN IP address reports
@@ -33,13 +36,25 @@ impl TrackerConfig {
     /// 2. if the configuration is not available, try to load configuration from the environment
     /// variables (see [`REPORT_URL_VAR`](REPORT_URL_VAR) and [`TOKEN_ENV_VAR`](TOKEN_ENV_VAR))
     pub fn load() -> Option<Self> {
-        if let Ok(config) = confy::load(APP_NAME, None) {
+        if let Ok(config) = Self::load_config() {
             if config != TrackerConfig::default() {
                 return Some(config);
             }
         }
 
         Self::from_env()
+    }
+
+    #[cfg(windows)]
+    fn load_config() -> Result<Self, ConfyError> {
+        let current_dir_config = std::env::current_exe().unwrap().with_file_name(APP_NAME);
+
+        confy::load_path(current_dir_config)
+    }
+
+    #[cfg(unix)]
+    fn load_config() -> Result<Self, ConfyError> {
+        confy::load(APP_NAME, None)
     }
 
     /// Try to load tracker configuration from the environment variables
