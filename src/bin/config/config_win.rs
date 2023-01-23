@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT OR Apache-2.0 */
 use std::{ffi::OsString, thread, time::Duration};
 
 use vpn_ip_tracker::{TrackerConfig, APP_NAME, APP_SERVICE_NAME};

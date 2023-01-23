@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT OR Apache-2.0 */
 #[cfg(windows)]
 fn main() -> windows_service::Result<()> {
     vpn_tracker_service::run()
