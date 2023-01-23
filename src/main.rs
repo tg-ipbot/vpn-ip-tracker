@@ -1,14 +1,12 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0 */
 use clap::Parser;
+use ifcfg::IfCfg;
 use log::{debug, warn};
-use network_interface::{self, NetworkInterface, NetworkInterfaceConfig};
 
 use utils::IfaceInfo;
 use vpn_ip_tracker::TrackerConfig;
 
 mod utils;
-
-const REPORT_CERT_FILE: &str = "cert.pem";
 
 #[derive(Parser)]
 #[command(author, version)]
@@ -37,17 +35,20 @@ fn main() -> Result<(), AppError> {
     }
 
     let config = config.unwrap();
+    let client = reqwest::blocking::Client::builder()
+        .timeout(core::time::Duration::from_secs(10))
+        .build()
+        .unwrap();
 
     loop {
-        let net = NetworkInterface::show();
+        let net = IfCfg::get().expect("Unable to get network interface info");
 
-        for iface in net.unwrap().iter().filter(|it_iface| {
-            vpn_iface_check(it_iface)
-                && matches!(it_iface.addr, Some(network_interface::Addr::V4(_)))
+        for iface in net.into_iter().filter(|it_iface| {
+            vpn_iface_name_check(it_iface) && vpn_iface_ipv4_check(it_iface)
         }) {
-            if let Ok(ser_iface) = IfaceInfo::try_from(iface.to_owned()) {
+            if let Ok(ser_iface) = IfaceInfo::try_from(iface) {
                 if stored_iface.is_none() || stored_iface.as_ref().unwrap() != &ser_iface {
-                    match send_report(&ser_iface, &config) {
+                    match send_report(client.clone(), &ser_iface, &config) {
                         Ok(_) => {
                             debug!("Successfully report");
                             stored_iface = Some(ser_iface);
@@ -65,23 +66,15 @@ fn main() -> Result<(), AppError> {
     }
 }
 
-fn send_report(iface: &IfaceInfo, config: &TrackerConfig) -> reqwest::Result<()> {
+fn send_report(client: reqwest::blocking::Client, iface: &IfaceInfo, config: &TrackerConfig) -> reqwest::Result<()> {
     let data = iface.ip.to_string();
     let headers = prepare_headers(config.token.clone());
     let url = config.report_url.clone();
-    let cert = std::fs::read(REPORT_CERT_FILE).expect("Could not find valid certificate");
-    let cert = reqwest::Certificate::from_pem(cert.as_slice()).unwrap();
-    let client = reqwest::blocking::Client::builder()
-        .tls_sni(false)
-        .add_root_certificate(cert)
-        .build()
-        .unwrap();
 
     client
         .post(url)
         .headers(headers)
         .body(data)
-        .timeout(core::time::Duration::from_secs(10))
         .send()?
         .error_for_status()?;
 
@@ -99,11 +92,15 @@ fn prepare_headers(token: String) -> reqwest::header::HeaderMap {
 }
 
 #[cfg(unix)]
-fn vpn_iface_check(iface: &NetworkInterface) -> bool {
+fn vpn_iface_name_check(iface: &IfCfg) -> bool {
     iface.name.starts_with("tun")
 }
 
 #[cfg(windows)]
-fn vpn_iface_check(iface: &NetworkInterface) -> bool {
+fn vpn_iface_name_check(iface: &IfCfg) -> bool {
     iface.name.contains("OpenVPN TAP")
+}
+
+fn vpn_iface_ipv4_check(iface: &IfCfg) -> bool {
+    iface.addresses.iter().any(|addr| matches!(addr.address_family, ifcfg::AddressFamily::IPv4))
 }
