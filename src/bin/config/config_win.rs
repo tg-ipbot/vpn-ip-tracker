@@ -1,20 +1,18 @@
-use std::{
-    ffi::OsString,
-    thread,
-    time::Duration,
-};
+use std::{ffi::OsString, thread, time::Duration};
 
+use vpn_ip_tracker::{TrackerConfig, APP_NAME, APP_SERVICE_NAME};
 use windows_service::{
-    service::{ServiceAccess, ServiceAction, ServiceActionType, ServiceErrorControl, ServiceFailureActions, ServiceFailureResetPeriod, ServiceInfo, ServiceStartType, ServiceState, ServiceType},
+    service::{
+        ServiceAccess, ServiceAction, ServiceActionType, ServiceErrorControl,
+        ServiceFailureActions, ServiceFailureResetPeriod, ServiceInfo, ServiceStartType,
+        ServiceState, ServiceType,
+    },
     service_manager::{ServiceManager, ServiceManagerAccess},
 };
 
-use vpn_ip_tracker::{APP_SERVICE_NAME, TrackerConfig};
-
-use crate::{APP_NAME, ConfigError};
+use crate::ConfigError;
 
 type Result<T> = core::result::Result<T, ConfigError>;
-
 
 pub(super) fn config_setup(config: TrackerConfig) -> Result<()> {
     let binding = std::env::current_exe().map_err(ConfigError::Path)?;
@@ -28,8 +26,11 @@ pub(super) fn config_setup(config: TrackerConfig) -> Result<()> {
 pub(super) fn install_service() -> Result<()> {
     let manager_access = ServiceManagerAccess::CONNECT | ServiceManagerAccess::CREATE_SERVICE;
     let service_manager = ServiceManager::local_computer(None::<&str>, manager_access)?;
-    let service_binary_path = std::env::current_exe().unwrap().with_file_name(format!("{APP_SERVICE_NAME}.exe"));
-    let openvpn_service_dep = windows_service::service::ServiceDependency::Service(OsString::from("OpenVPNService"));
+    let service_binary_path = std::env::current_exe()
+        .unwrap()
+        .with_file_name(format!("{APP_SERVICE_NAME}.exe"));
+    let openvpn_service_dep =
+        windows_service::service::ServiceDependency::Service(OsString::from("OpenVPNService"));
     let service_info = ServiceInfo {
         name: OsString::from(APP_NAME),
         display_name: OsString::from("VpnIpTracking"),
@@ -42,14 +43,15 @@ pub(super) fn install_service() -> Result<()> {
         account_name: None, // run as System
         account_password: None,
     };
-    let service = service_manager.create_service(&service_info, ServiceAccess::CHANGE_CONFIG | ServiceAccess::START)?;
+    let service = service_manager.create_service(
+        &service_info,
+        ServiceAccess::CHANGE_CONFIG | ServiceAccess::START,
+    )?;
 
-    let actions = vec![
-        ServiceAction {
-            action_type: ServiceActionType::Restart,
-            delay: Duration::from_secs(5),
-        },
-    ];
+    let actions = vec![ServiceAction {
+        action_type: ServiceActionType::Restart,
+        delay: Duration::from_secs(5),
+    }];
 
     let reset_period = Duration::from_secs(86400 * 2);
     let failure_actions = ServiceFailureActions {

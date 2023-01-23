@@ -2,14 +2,14 @@ use std::io::{BufRead, BufReader, Error, ErrorKind, Write};
 
 use directories::BaseDirs;
 
-type Result<T> = core::result::Result<T, Error>;
+use vpn_ip_tracker::{TrackerConfig, APP_NAME};
+
+use crate::ConfigError;
+
+type Result<T> = core::result::Result<T, ConfigError>;
 
 pub(super) fn config_setup(config: TrackerConfig) -> Result<()> {
-    confy::store(
-        APP_NAME,
-        None,
-        config,
-    )?;
+    confy::store(APP_NAME, None, config)?;
 
     Ok(())
 }

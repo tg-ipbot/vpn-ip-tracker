@@ -18,7 +18,8 @@ impl TryFrom<IfCfg> for IfaceInfo {
             return Err("Address is unknown");
         }
 
-        match value.addresses
+        match value
+            .addresses
             .iter()
             .find(|addr| matches!(addr.address, Some(net::SocketAddr::V4(_))))
         {
@@ -27,7 +28,7 @@ impl TryFrom<IfCfg> for IfaceInfo {
                 ip: iface_addr.address.unwrap().ip(),
                 index: 0,
             }),
-            None => Err("No supported IP address found")
+            None => Err("No supported IP address found"),
         }
     }
 }

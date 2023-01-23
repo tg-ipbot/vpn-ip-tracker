@@ -5,12 +5,10 @@ use confy::ConfyError;
 use thiserror::Error;
 
 #[cfg(unix)]
-use config_linux::install_service;
+use config_linux::{config_setup, install_service, uninstall_service};
 #[cfg(windows)]
-use config_win::{config_setup, install_service};
-use vpn_ip_tracker::{APP_NAME, DEFAULT_REPORT_URL, TrackerConfig};
-
-use crate::config_win::uninstall_service;
+use config_win::{config_setup, install_service, uninstall_service};
+use vpn_ip_tracker::{TrackerConfig, DEFAULT_REPORT_URL};
 
 #[cfg(unix)]
 mod config_linux;
@@ -53,13 +51,11 @@ fn main() -> Result<(), ConfigError> {
     let args = Cli::parse();
 
     match args.command {
-        Commands::Install {
-            token, report_url
-        } => {
+        Commands::Install { token, report_url } => {
             config_setup(TrackerConfig::new(
                 token,
-                report_url.unwrap_or_else(|| DEFAULT_REPORT_URL.into()))
-            )?;
+                report_url.unwrap_or_else(|| DEFAULT_REPORT_URL.into()),
+            ))?;
             install_service()?;
         }
         Commands::Uninstall => {

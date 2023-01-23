@@ -10,20 +10,16 @@ fn main() {
 
 #[cfg(windows)]
 mod vpn_tracker_service {
-    use std::{
-        ffi::OsString,
-        sync::mpsc,
-        time::Duration,
-    };
+    use std::{ffi::OsString, sync::mpsc, time::Duration};
 
     use windows_service::{
         define_windows_service,
-        Result,
         service::{
             ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus,
             ServiceType,
         },
-        service_control_handler::{self, ServiceControlHandlerResult}, service_dispatcher,
+        service_control_handler::{self, ServiceControlHandlerResult},
+        service_dispatcher, Result,
     };
 
     use vpn_ip_tracker::APP_NAME;

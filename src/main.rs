@@ -43,9 +43,10 @@ fn main() -> Result<(), AppError> {
     loop {
         let net = IfCfg::get().expect("Unable to get network interface info");
 
-        for iface in net.into_iter().filter(|it_iface| {
-            vpn_iface_name_check(it_iface) && vpn_iface_ipv4_check(it_iface)
-        }) {
+        for iface in net
+            .into_iter()
+            .filter(|it_iface| vpn_iface_name_check(it_iface) && vpn_iface_ipv4_check(it_iface))
+        {
             if let Ok(ser_iface) = IfaceInfo::try_from(iface) {
                 if stored_iface.is_none() || stored_iface.as_ref().unwrap() != &ser_iface {
                     match send_report(client.clone(), &ser_iface, &config) {
@@ -66,7 +67,11 @@ fn main() -> Result<(), AppError> {
     }
 }
 
-fn send_report(client: reqwest::blocking::Client, iface: &IfaceInfo, config: &TrackerConfig) -> reqwest::Result<()> {
+fn send_report(
+    client: reqwest::blocking::Client,
+    iface: &IfaceInfo,
+    config: &TrackerConfig,
+) -> reqwest::Result<()> {
     let data = iface.ip.to_string();
     let headers = prepare_headers(config.token.clone());
     let url = config.report_url.clone();
@@ -102,5 +107,8 @@ fn vpn_iface_name_check(iface: &IfCfg) -> bool {
 }
 
 fn vpn_iface_ipv4_check(iface: &IfCfg) -> bool {
-    iface.addresses.iter().any(|addr| matches!(addr.address_family, ifcfg::AddressFamily::IPv4))
+    iface
+        .addresses
+        .iter()
+        .any(|addr| matches!(addr.address_family, ifcfg::AddressFamily::IPv4))
 }
