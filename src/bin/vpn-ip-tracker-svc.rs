@@ -92,7 +92,7 @@ mod vpn_tracker_service {
         let current_dir = current_exe.parent().unwrap();
         let tracker_executable = current_exe.with_file_name(format!("{APP_NAME}.exe"));
         let child = std::process::Command::new(tracker_executable)
-            .current_dir(current_dir.clone())
+            .current_dir(current_dir)
             .spawn();
 
         if let Err(e) = child {
