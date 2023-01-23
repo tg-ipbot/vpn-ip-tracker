@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0 */
 use std::net;
 
-use network_interface::NetworkInterface;
+use ifcfg::IfCfg;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct IfaceInfo {
@@ -10,18 +10,24 @@ pub(crate) struct IfaceInfo {
     pub(crate) index: u32,
 }
 
-impl TryFrom<NetworkInterface> for IfaceInfo {
+impl TryFrom<IfCfg> for IfaceInfo {
     type Error = &'static str;
 
-    fn try_from(value: NetworkInterface) -> Result<Self, Self::Error> {
-        if value.addr.is_none() {
+    fn try_from(value: IfCfg) -> Result<Self, Self::Error> {
+        if value.addresses.is_empty() {
             return Err("Address is unknown");
         }
 
-        Ok(IfaceInfo {
-            name: value.name,
-            ip: value.addr.unwrap().ip(),
-            index: value.index,
-        })
+        match value.addresses
+            .iter()
+            .find(|addr| matches!(addr.address, Some(net::SocketAddr::V4(_))))
+        {
+            Some(iface_addr) => Ok(IfaceInfo {
+                name: value.name,
+                ip: iface_addr.address.unwrap().ip(),
+                index: 0,
+            }),
+            None => Err("No supported IP address found")
+        }
     }
 }
