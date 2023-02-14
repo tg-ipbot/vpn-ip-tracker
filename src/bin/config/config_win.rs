@@ -30,8 +30,8 @@ pub(super) fn install_service() -> Result<()> {
     let service_binary_path = std::env::current_exe()
         .unwrap()
         .with_file_name(format!("{APP_SERVICE_NAME}.exe"));
-    let openvpn_service_dep =
-        windows_service::service::ServiceDependency::Service(OsString::from("OpenVPNService"));
+    let dhcp_service_dependency =
+        windows_service::service::ServiceDependency::Service(OsString::from("Dhcp"));
     let service_info = ServiceInfo {
         name: OsString::from(APP_NAME),
         display_name: OsString::from("VpnIpTracking"),
@@ -40,7 +40,7 @@ pub(super) fn install_service() -> Result<()> {
         error_control: ServiceErrorControl::Normal,
         executable_path: service_binary_path,
         launch_arguments: vec![],
-        dependencies: vec![openvpn_service_dep],
+        dependencies: vec![dhcp_service_dependency],
         account_name: None, // run as System
         account_password: None,
     };
